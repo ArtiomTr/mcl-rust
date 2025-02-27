@@ -4,10 +4,13 @@ on: [push]
 jobs:
   build:
     name: test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-    - uses: actions/checkout@v2
-    - run: sudo apt update
-    - run: git submodule update --init --recursive
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
     - run: cargo build
     - run: cargo test

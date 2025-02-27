@@ -1,25 +1,20 @@
-use std::env;
-use std::process::Command;
+use cmake::Config;
 
 fn main() {
-    let out_dir = env::var("OUT_DIR").unwrap();
-    let top_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let opt = if cfg!(target_arch = "x86_64") {
-        ""
-    } else {
-        "-DCMAKE_CXX_COMPILER=clang++"
-    };
+    let mut config = Config::new("mcl");
+    config.define("MCL_STATIC_LIB", "ON").define("MCL_STANDALONE", "ON");
 
-    let cmd = format!(
-        "cd {out} && cmake {top}/mcl -DMCL_STATIC_LIB=ON -DMCL_STANDALONE=ON {opt} && make -j",
-        out = out_dir,
-        top = top_dir,
-        opt = opt
-    );
-    Command::new("sh")
-        .args(["-c", &cmd])
-        .output()
-        .expect("fail");
-    let s = format!("cargo:rustc-link-search=native={}/lib", out_dir);
-    println!("{}", s);
+    if cfg!(any(target_arch = "x86_64", target_os = "windows")) {
+        config.define("CMAKE_CXX_COMPILER", "clang++");
+    }
+
+    if cfg!(all(target_arch = "x86_64", not(target_os = "windows"))) {
+        println!("cargo:rustc-link-lib=stdc++");
+    }
+
+    let dst = config.build();
+
+    println!("cargo:rustc-link-search=native={}", dst.join("lib").display());
+    println!("cargo:rustc-link-lib=static=mcl");
+    println!("cargo:rustc-link-lib=static=mclbn384_256");
 }
